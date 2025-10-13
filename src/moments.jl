@@ -45,6 +45,7 @@ end
 function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliStringTS}; scale=0)
     checklength(o1, o2)
     Ls = qubitsize(o1)
+    Ps = periodicflags(o1)
     tr = zero(scalartype(o1))
 
     # see above
@@ -59,15 +60,17 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliString
         rep1 = representative(p1)
         p, k = prod(rep1, rep1)
         f = c1 * c2 * k
-        for s in all_shifts(Ls)
-            shifted = shift(rep1, Ls, s)
+        for s in all_shifts(Ls, Ps)
+            shifted = shift(rep1, Ls, Ps, s)
             if shifted == rep1
                 tr += f
             end
         end
     end
     (scale == 0) && (scale = 2.0^Base.prod(Ls))
-    return tr * scale * Base.prod(Ls)
+    # Calculate the number of translations: product of lengths for periodic dimensions only
+    num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
+    return tr * scale * num_translations
 end
 
 Base.@deprecate oppow(o::AbstractOperator, k::Int) o^k
